@@ -3,9 +3,9 @@
  * (C) Dominique Cavailhez 2017
  * https://github.com/Dominique92/MyOl
  */
-//TODO END test with ol non debug
+//TODO END test with libs non debug
 //TODO END http://jsbeautifier.org/
-//TODO END check , à la fin des tablos : http://jshint.com/
+//TODO END check , à la fin des tablos : http://jshint.com
 //TODO BEST Site off line, application
 
 /**
@@ -120,10 +120,10 @@ function layerIGN(key, layer, format) {
 }
 
 /**
- * Incomplete cards
+ * Layers with not all resolutions or area available
  * Virtual class
  * Displays OSM outside the zoom area, 
- * Displays blank outside the area of validity
+ * Displays blank outside of validity area
  * Requires 'onadd' layer event
  */
 function layerTileIncomplete(extent, sources) {
@@ -1248,6 +1248,7 @@ window.addEventListener('load', function() {
 function controlsCollection() {
 	return [
 		new ol.control.ScaleLine(),
+//TODO BEST BUG coordinate affiche un petit carré bleu quand le curseur est en dehors de la carte
 		new ol.control.MousePosition({
 			coordinateFormat: ol.coordinate.createStringXY(5),
 			projection: 'EPSG:4326',
