@@ -16,7 +16,7 @@ ol.Map.prototype.renderFrame_ = function(time) {
 	for (var i = 0, ii = layers.length; i < ii; ++i)
 		if (!layers[i].layer.map_) { // Only once
 			layers[i].layer.map_ = this; // Store the map where the layer is rendered
-			layers[i].layer.dispatchEvent(new ol.MapEvent('onadd', this));
+			layers[i].layer.dispatchEvent('onadd');
 		}
 
 	ol.PluggableMap.prototype.renderFrame_.call(this, time);
@@ -131,8 +131,8 @@ function layerTileIncomplete(extent, sources) {
 		backgroundSource = new ol.source.Stamen({
 			layer: 'terrain'
 		});
-	layer.on('onadd', function(e) {
-		e.map.getView().on('change', change);
+	layer.on('onadd', function(event) {
+		event.target.map_.getView().on('change', change);
 		change(); // At init
 	});
 
@@ -378,8 +378,8 @@ function layerVectorURL(options) {
 			strategy: ol.loadingstrategy.bboxDependant,
 			url: function(extent, resolution, projection) {
 				var bbox = ol.proj.transformExtent(extent, projection.getCode(), 'EPSG:4326'),
-					list = permanentCheckboxList(options.selector).filter(function(e) {
-						return e !== 'on'; // Remove the "all" input (default value = "on")
+					list = permanentCheckboxList(options.selector).filter(function(event) {
+						return event !== 'on'; // Remove the "all" input (default value = "on")
 					});
 				return typeof options.url == 'function' ?
 					options.url(bbox, list) :
@@ -406,12 +406,12 @@ function layerVectorURL(options) {
 	}
 
 	layer.options_ = options; //HACK Mem options for interactions
-	layer.on('onadd', function(e) {
-		initLayerVectorURLListeners(e.map);
+	layer.on('onadd', function(event) {
+		initLayerVectorURLListeners(event.target.map_);
 
 		// Hover activity (coloring the feature)
 		if (typeof options.hover == 'function')
-			e.map.addInteraction(new ol.interaction.Select({
+			event.target.map_.addInteraction(new ol.interaction.Select({
 				layers: [layer],
 				condition: ol.events.condition.pointerMove,
 				hitTolerance: 6, // Similar to other defaults
@@ -632,7 +632,7 @@ ol.format.OSMXMLPOI = function() {
 							newNode.appendChild(subTagNode.cloneNode());
 					}
 			}
-		return ol.format.XMLFeature.prototype.readFeatures.call(this, source, opt_options);
+		return ol.format.OSMXML.prototype.readFeatures.call(this, source, opt_options);
 	};
 };
 ol.inherits(ol.format.OSMXMLPOI, ol.format.OSMXML);
@@ -647,8 +647,8 @@ function layerOverpass(options) {
 	var layer = layerVectorURL({
 		url: function(bbox) {
 			var bb = '(' + bbox[1] + ',' + bbox[0] + ',' + bbox[3] + ',' + bbox[2] + ');',
-				list = permanentCheckboxList(options.selector).filter(function(e) {
-					return e !== 'on'; // Remove the "all" input (default value = "on")
+				list = permanentCheckboxList(options.selector).filter(function(event) {
+					return event !== 'on'; // Remove the "all" input (default value = "on")
 				}),
 				args = [];
 
@@ -760,10 +760,10 @@ function marqueur(imageUrl, ll, IdDisplay, format, movable) { // imageUrl, [lon,
 			style: iconStyle,
 			zIndex: 2
 		});
-	layer.on('onadd', function(e) {
+	layer.on('onadd', function(event) {
 		if (movable) {
 			// Drag and drop
-			e.map.addInteraction(new ol.interaction.Modify({
+			event.target.map_.addInteraction(new ol.interaction.Modify({
 				features: new ol.Collection([iconFeature]),
 				style: iconStyle
 			}));
@@ -784,6 +784,7 @@ function marqueur(imageUrl, ll, IdDisplay, format, movable) { // imageUrl, [lon,
 			format.length >= 2 &&
 			typeof proj4 == 'function') {
 			proj4.defs('EPSG:21781', '+proj=somerc +lat_0=46.95240555555556 +lon_0=7.439583333333333 +k_0=1 +x_0=600000 +y_0=200000 +ellps=bessel +towgs84=660.077,13.551,369.344,2.484,1.783,2.939,5.66 +units=m +no_defs');
+			ol.proj.proj4.register(proj4);
 			var c21781 = ol.proj.transform(ll, 'EPSG:3857', 'EPSG:21781');
 			html += format[1];
 			p.push(Math.round(c21781[0]), Math.round(c21781[1]));
@@ -1090,7 +1091,7 @@ function controlLengthLine() {
 	}
 
 	function calculateLength(f) {
-		var length = ol.Sphere.getLength(f.getGeometry());
+		var length = ol.sphere.getLength(f.getGeometry());
 		if (length >= 100000)
 			divElement.innerHTML = (Math.round(length / 1000)) + ' km';
 		else if (length >= 10000)
@@ -1191,8 +1192,8 @@ function controlDownloadGPX() {
 					condition: ol.events.condition.click,
 					hitTolerance: 6
 				});
-				select.on('select', function(e) {
-					selectedFeatures = e.target.getFeatures().getArray();
+				select.on('select', function(event) {
+					selectedFeatures = event.target.getFeatures().getArray();
 				});
 				map.addInteraction(select);
 			}
