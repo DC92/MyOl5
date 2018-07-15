@@ -820,31 +820,23 @@ function marqueur(imageUrl, ll, IdDisplay, format, movable) { // imageUrl, [lon,
  * Control buttons
  * Abstract definition to be used by other control buttons definitions
  *
- * options.invisible {true | false | undefined} add a control button to the map.
  * label {string} character to be displayed in the button.
- * options.color {string} backgrond color of the button.
  * options.className {string} className of the button.
  * options.rightPosition {float} distance to the top when the button is on the right of the map.
  * options.title {string} displayed when the control is hovered.
  * options.render {function} called when the control is rendered.
  * options.action {function} called when the control is clicked.
  */
-//TODO BEST avoir des images svg online pour les boutons
-//TODO BEST automatiser position des autres boutons
 var nextButtonTopPos = 6; // Top position of next button (em)
 
-function controlButton(label, options) {
+function controlButton(options) {
 	var buttonElement = document.createElement('button');
-	buttonElement.innerHTML = label;
+	buttonElement.innerHTML = options.label || '';
 	if (options.action)
 		buttonElement.addEventListener('click', options.action, false);
-	if (options.color)
-		buttonElement.style.backgroundColor = options.color; // Color button
 	var divElement = document.createElement('div');
 	divElement.className = 'ol-button ol-unselectable ol-control ' + (options.className || '');
-	if (options.invisible)
-		divElement.style.display = 'none';
-	else if (options.rightPosition) {
+	if (options.rightPosition) {
 		divElement.style.right = '.5em';
 		divElement.style.top = options.rightPosition + 'em';
 	} else {
@@ -866,7 +858,8 @@ function controlButton(label, options) {
  * Requires controlButton & controlPermanentCheckbox
  */
 function controlLayersSwitcher(baseLayers) {
-	var control = controlButton('&hellip;', {
+	var control = controlButton({
+		label: '&hellip;',
 		className: 'switch-layer',
 		title: 'Liste des cartes',
 		rightPosition: 0.5,
@@ -1042,7 +1035,8 @@ function controlGPS() {
 	});
 
 	var active = false,
-		bouton = controlButton('G', {
+		bouton = controlButton({
+			className: 'gps-button',
 			title: 'Centrer sur la position GPS',
 			action: function(event) {
 				active ^= 1; // Toggle on / off
@@ -1112,7 +1106,8 @@ function controlLengthLine() {
 //TODO BEST Pas d'upload/download sur mobile (-> va vers photos !)
 function controlLoadGPX() {
 	var inputElement = document.createElement('input'),
-		button = controlButton('&uArr;', {
+		button = controlButton({
+			label: '&uArr;',
 			title: 'Visualiser un fichier GPX sur la carte',
 			action: function() {
 				inputElement.click();
@@ -1165,7 +1160,8 @@ function controlDownloadGPX() {
 	var map,
 		selectedFeatures = [],
 		hiddenElement = document.createElement('a'),
-		button = controlButton('&dArr;', {
+		button = controlButton({
+			label: '&dArr;',
 			title: 'Obtenir un fichier GPX',
 			render: render,
 			action: function() {
@@ -1238,7 +1234,7 @@ function controlDownloadGPX() {
 window.addEventListener('load', function() {
 	var buttonElement = document.getElementById('gcd-button-control');
 	if (buttonElement)
-		buttonElement.title = 'Localisation par nom';
+		buttonElement.title = 'Recherche de lieu par son nom';
 }, true);
 
 /**
@@ -1259,8 +1255,8 @@ function controlsCollection() {
 		}),
 		new ol.control.Zoom(),
 		new ol.control.FullScreen({
-			label: '\u21d4', // For old navigators support
-			labelActive: '\u21ce',
+			label: '',
+			labelActive: '',
 			tipLabel: 'Plein écran'
 		}),
 		controlLengthLine(),
@@ -1280,7 +1276,9 @@ function controlsCollection() {
 		controlLoadGPX(),
 		controlDownloadGPX(),
 //TODO impression full format page -> CSS
-		controlButton('&equiv;', {
+//TODO BEST un BO picto printer
+		controlButton({
+			label: '&equiv;',
 			title: 'Imprimer la carte',
 			action: function() {
 				window.print();
@@ -1328,7 +1326,8 @@ function controlLineEditor(id, snapLayers) {
 			})
 		},
 		editMode = true, // Versus false if insert line mode
-		bouton = controlButton('E', {
+		bouton = controlButton({
+			label: 'E',
 			render: render,
 			title: "Editeur de lignes\n" +
 				"Click sur E pour ajouter ou étendre une ligne, doubleclick pour finir\n" +
