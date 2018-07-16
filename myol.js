@@ -578,10 +578,11 @@ function layerPointsWri() {
  * chemineur.fr POI layer
  * Requires layerVectorURL
  */
+//TODO BUG affichage traces
 function chemineurLayer() {
 	return layerVectorURL({
 //TODO BEST : ajuster le https au vrai besoin
-		url: '//dc9.fr/chemineur/ext/Dominique92/GeoBB/gis.php?site=this&poi=3,8,16,20,23,28,30,40,44,64,58,62',
+		url: '//dc9.fr/chemineur/ext/Dominique92/GeoBB/gis.php?site=this&poi=3,8,16,20,23,28,30,40,44,64,58,62,65',
 		selector: 'chemineur',
 		style: function(properties) {
 			return {
@@ -1132,7 +1133,7 @@ function controlLoadGPX() {
 			map.sourceEditor.addFeatures(features); // Add the track to the editor
 
 			// Zomm the map on the added features
-			var extent = ol.extent.createOrUpdateEmpty();
+			var extent = ol.extent.createEmpty();
 			for (var f in features)
 				ol.extent.extend(extent, features[f].getGeometry().getExtent());
 			button.getMap().getView().fit(extent);
