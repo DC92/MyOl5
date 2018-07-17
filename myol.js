@@ -304,7 +304,6 @@ function layersCollection(keys) {
 /**
  * Mem in cookies the checkbox content with name="name"
  */
-//TODO BEST en faire un vrai controle et inclure cette fonction
 function controlPermanentCheckbox(name, callback) {
 	var checkElements = document.getElementsByName(name),
 		cookie =
@@ -406,7 +405,6 @@ function layerVectorURL(options) {
 	layer.on('onadd', function(event) {
 		initLayerVectorURLListeners(event.target.map_);
 
-if(0)//TODO BUG never called !!
 		// Hover activity (coloring the feature)
 		if (typeof options.hover == 'function')
 			event.target.map_.addInteraction(new ol.interaction.Select({
@@ -475,12 +473,12 @@ function initLayerVectorURLListeners(map) {
 
 				// Fill label class & text
 				var properties = feature_.getProperties();
-				properties.lon=Math.round(ll4326[0] * 100000) / 100000;
-				properties.lat=Math.round(ll4326[1] * 100000) / 100000;
+				properties.lon = Math.round(ll4326[0] * 100000) / 100000;
+				properties.lat = Math.round(ll4326[1] * 100000) / 100000;
 				map.popElement_.className = 'popup ' + (layer_.options_.labelClass || '');
-				map.popElement_.innerHTML =					typeof layer_.options_.label == 'function' ?
-						layer_.options_.label(properties, feature_, layer_) :
-						layer_.options_.label || '' ;
+				map.popElement_.innerHTML = typeof layer_.options_.label == 'function' ?
+					layer_.options_.label(properties, feature_, layer_) :
+					layer_.options_.label || '';
 			}
 
 			// Hover a clikable feature
@@ -504,7 +502,6 @@ function initLayerVectorURLListeners(map) {
 		}
 	}
 }
-
 /**
  * www.refuges.info areas layer
  * Requires layerVectorURL
@@ -528,7 +525,6 @@ function layerMassifsWri() {
 		label: function(properties) {
 			return properties.nom;
 		},
-//TBD hover : style de base et non celui là
 		hover: function(properties) {
 			return {
 				fill: new ol.style.Fill({
@@ -591,7 +587,14 @@ function chemineurLayer() {
 				})
 			};
 		},
-//TODO Hover = style de base
+		hover: function(properties) {
+			return {
+				stroke: new ol.style.Stroke({
+					color: 'red',
+					width: 3
+				})
+			};
+		},
 		label: function(properties) {
 			return properties.nom;
 		},
@@ -1076,14 +1079,9 @@ function controlLengthLine() {
 			divElement.className = 'ol-length-line';
 
 			event.map.on(['pointermove'], function(event) {
-				divElement.innerHTML = ''; // Clear the measure if n hoveredo feature
+				divElement.innerHTML = ''; // Clear the measure if hover no feature
+				event.map.forEachFeatureAtPixel(event.pixel, calculateLength);
 			});
-
-			event.map.addInteraction(new ol.interaction.Select({
-				condition: ol.events.condition.pointerMove,
-				hitTolerance: 6,
-				filter: calculateLength // HACK : use of filter to perform an action
-			}));
 		}
 	}
 
@@ -1097,11 +1095,12 @@ function controlLengthLine() {
 			divElement.innerHTML = (Math.round(length / 1000 * 100) / 100) + ' km';
 		else if (length >= 1)
 			divElement.innerHTML = (Math.round(length)) + ' m';
-		return length > 0; // Continue hover if we are above a line
+		return true; // Stop detection
 	}
 
 	return control;
 }
+
 /**
  * GPX file loader control
  * Requires controlButton
@@ -1186,23 +1185,17 @@ function controlDownloadGPX() {
 		if (!map) {
 			map = event.map;
 
-//TODO BUG ajoute un point bleu quand on clique !!!
 			// Perform selection if there is no active editor
-			//if (!map.sourceEditor) {
+			if (!map.sourceEditor) {
 				var select = new ol.interaction.Select({
-					//condition: ol.events.condition.click,
-					condition: function(event){
-						if (!map.sourceEditor&&
-						event.type == 'click'){
-						}
-					},
+					condition: ol.events.condition.click,
 					hitTolerance: 6
 				});
 				select.on('select', function(event) {
 					selectedFeatures = event.target.getFeatures().getArray();
 				});
 				map.addInteraction(select);
-			//}
+			}
 		}
 	}
 
@@ -1301,6 +1294,7 @@ function controlsCollection() {
  * Line Editor
  * Requires controlButton
  */
+//TODO BUG pas de hover de la ligne sélectionnée
 //TODO BUG stick ne marche pas avec les traces de chemineur
 //TODO Inhiber les clicks si présence éditeur
 function controlLineEditor(id, snapLayers) {
