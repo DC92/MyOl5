@@ -888,6 +888,7 @@ function controlLayersSwitcher(baseLayers) {
 
 	// When the map is created & rendered
 	var map;
+
 	function render(event) {
 		if (!map) { // Only the first time
 			map = event.map; // mem map for further use
@@ -1279,9 +1280,8 @@ function controlsCollection() {
 		controlLoadGPX(),
 		controlDownloadGPX(),
 //TODO impression full format page -> CSS
-//TODO BEST un BO picto printer
 		controlButton({
-			label: '&equiv;',
+			className: 'print-button',
 			title: 'Imprimer la carte',
 			action: function() {
 				window.print();
