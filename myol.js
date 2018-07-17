@@ -3,9 +3,8 @@
  * (C) Dominique Cavailhez 2017
  * https://github.com/Dominique92/MyOl
  */
-//TODO END test with libs non debug
-//TODO END http://jsbeautifier.org/
-//TODO END check , à la fin des tablos : http://jshint.com
+//END test with libs non debug / on mobile
+//END http://jsbeautifier.org/ & http://jshint.com
 //TODO BEST Site off line, application
 
 /**
@@ -71,7 +70,7 @@ function layerGoogle(layer) {
 	return new ol.layer.Tile({
 		source: new ol.source.XYZ({
 			url: '//mt{0-3}.google.com/vt/lyrs=' + layer + '&x={x}&y={y}&z={z}',
-			attributions: '<a href="https://www.google.com/maps">Google</a>'
+			attributions: '&copy; <a href="https://www.google.com/maps">Google</a>'
 		})
 	});
 }
@@ -181,7 +180,7 @@ function layerSwissTopo(layer) {
 			url: '//wmts2{0-4}.geo.admin.ch/1.0.0/' + layer + '/default/current/3857/{TileMatrix}/{TileCol}/{TileRow}.jpeg',
 			tileGrid: tileGrid,
 			requestEncoding: 'REST',
-			attributions: '<a href="https://map.geo.admin.ch/">SwissTopo</a>'
+			attributions: '&copy <a href="https://map.geo.admin.ch/">SwissTopo</a>'
 		}))
 	});
 }
@@ -197,7 +196,7 @@ function layerIGM() {
 			params: {
 				layers: layer
 			},
-			attributions: '<a href="http://www.pcn.minambiente.it/viewer">IGM</a>'
+			attributions: '&copy <a href="http://www.pcn.minambiente.it/viewer">IGM</a>'
 		});
 	}
 
@@ -218,7 +217,7 @@ function layerSpain(serveur, layer) {
 				'&Service=WMTS&Request=GetTile&Version=1.0.0&Format=image/jpeg' +
 				'&style=default&tilematrixset=GoogleMapsCompatible' +
 				'&TileMatrix={z}&TileCol={x}&TileRow={y}',
-			attributions: '<a href="http://www.ign.es/">IGN España</a>'
+			attributions: '&copy; <a href="http://www.ign.es/">IGN España</a>'
 		})
 	});
 }
@@ -226,7 +225,6 @@ function layerSpain(serveur, layer) {
 /**
  * Bing (Microsoft)
  */
-//TODO BEST éviter d'appeler à l'init https://dev.virtualearth.net
 function layerBing(layer, key) {
 	return new ol.layer.Tile({
 		source: new ol.source.BingMaps({
@@ -236,12 +234,11 @@ function layerBing(layer, key) {
 	});
 }
 
+//TODO BEST éviter d'appeler à l'init https://dev.virtualearth.net sur les cartes BING
 /**
  * Ordnance Survey : Great Britain
  * Requires layerTileIncomplete
  */
-//TODO BEST attribution : Ordnance Survey
-//TODO BEST éviter d'appeler à l'init https://dev.virtualearth.net
 function layerOS(key) {
 	return layerTileIncomplete([-841575, 6439351, 198148, 8589177], { // EPSG:27700 (G.B.)
 		100: new ol.source.BingMaps({
@@ -409,6 +406,7 @@ function layerVectorURL(options) {
 	layer.on('onadd', function(event) {
 		initLayerVectorURLListeners(event.target.map_);
 
+if(0)//TODO BUG never called !!
 		// Hover activity (coloring the feature)
 		if (typeof options.hover == 'function')
 			event.target.map_.addInteraction(new ol.interaction.Select({
@@ -492,7 +490,6 @@ function initLayerVectorURLListeners(map) {
 			return true; // Stop detection
 		}
 
-//TODO BUG click sur un feature non clicable le transforme en point !!
 		// Click on feature
 		map.on('click', function(event) {
 			// Search the clicked the feature(s)
@@ -531,12 +528,12 @@ function layerMassifsWri() {
 		label: function(properties) {
 			return properties.nom;
 		},
+//TBD hover : style de base et non celui là
 		hover: function(properties) {
 			return {
 				fill: new ol.style.Fill({
 					color: properties.couleur
 				}),
-//TODO BUG click superpose avec le style hover (bord bleu)
 				stroke: new ol.style.Stroke({
 					color: 'black'
 				})
@@ -578,19 +575,23 @@ function layerPointsWri() {
  * chemineur.fr POI layer
  * Requires layerVectorURL
  */
-//TODO BUG affichage traces
 function chemineurLayer() {
 	return layerVectorURL({
-//TODO BEST : ajuster le https au vrai besoin
 		url: '//dc9.fr/chemineur/ext/Dominique92/GeoBB/gis.php?site=this&poi=3,8,16,20,23,28,30,40,44,64,58,62,65',
 		selector: 'chemineur',
 		style: function(properties) {
 			return {
+				// POI
 				image: new ol.style.Icon({
 					src: properties.icone
+				}),
+				// Traces
+				stroke: new ol.style.Stroke({
+					color: 'blue'
 				})
 			};
 		},
+//TODO Hover = style de base
 		label: function(properties) {
 			return properties.nom;
 		},
@@ -644,6 +645,7 @@ ol.inherits(ol.format.OSMXMLPOI, ol.format.OSMXML);
  * Doc: http://wiki.openstreetmap.org/wiki/Overpass_API/Language_Guide
  * Requires layerVectorURL
  */
+//TODO BEST eviter d'appeler OSM pour une trop grande zone
 function layerOverpass(options) {
 	var layer = layerVectorURL({
 		url: function(bbox) {
@@ -1184,16 +1186,23 @@ function controlDownloadGPX() {
 		if (!map) {
 			map = event.map;
 
-			if (!map.sourceEditor) { // If there is no active editor
+//TODO BUG ajoute un point bleu quand on clique !!!
+			// Perform selection if there is no active editor
+			//if (!map.sourceEditor) {
 				var select = new ol.interaction.Select({
-					condition: ol.events.condition.click,
+					//condition: ol.events.condition.click,
+					condition: function(event){
+						if (!map.sourceEditor&&
+						event.type == 'click'){
+						}
+					},
 					hitTolerance: 6
 				});
 				select.on('select', function(event) {
 					selectedFeatures = event.target.getFeatures().getArray();
 				});
 				map.addInteraction(select);
-			}
+			//}
 		}
 	}
 
@@ -1245,11 +1254,11 @@ window.addEventListener('load', function() {
 function controlsCollection() {
 	return [
 		new ol.control.ScaleLine(),
-//TODO BEST BUG coordinate affiche un petit carré bleu quand le curseur est en dehors de la carte
 		new ol.control.MousePosition({
 			coordinateFormat: ol.coordinate.createStringXY(5),
 			projection: 'EPSG:4326',
-			className: 'ol-coordinate'
+			className: 'ol-coordinate',
+			undefinedHTML: String.fromCharCode(0)
 		}),
 		new ol.control.Attribution({
 			collapsible: false // Attribution always open
@@ -1292,8 +1301,8 @@ function controlsCollection() {
  * Line Editor
  * Requires controlButton
  */
-//TODO BUG stick ne marche pas
-//TODO BUG fait un point si on clique sans ALT pour supprimer un sommet
+//TODO BUG stick ne marche pas avec les traces de chemineur
+//TODO Inhiber les clicks si présence éditeur
 function controlLineEditor(id, snapLayers) {
 	var textareaElement = document.getElementById(id), // <textarea> element
 		format = new ol.format.GeoJSON(),
