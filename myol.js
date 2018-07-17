@@ -378,8 +378,8 @@ function layerVectorURL(options) {
 						return event !== 'on'; // Remove the "all" input (default value = "on")
 					});
 				return typeof options.url == 'function' ?
-					options.url(bbox, list) :
-					options.url + list.join(',') + '&bbox=' + bbox.join(','); // Default most common url
+					options.url(bbox, list, resolution) :
+					options.url + list.join(',') + '&bbox=' + bbox.join(','); // Default most common url format
 			},
 			format: options.format || new ol.format.GeoJSON()
 		}),
@@ -648,21 +648,18 @@ ol.inherits(ol.format.OSMXMLPOI, ol.format.OSMXML);
  * Doc: http://wiki.openstreetmap.org/wiki/Overpass_API/Language_Guide
  * Requires layerVectorURL
  */
-//TODO BEST eviter d'appeler OSM pour une trop grande zone
 function layerOverpass(options) {
 	var layer = layerVectorURL({
-		url: function(bbox) {
+		url: function(bbox, list, resolution) {
 			var bb = '(' + bbox[1] + ',' + bbox[0] + ',' + bbox[3] + ',' + bbox[2] + ');',
-				list = permanentCheckboxList(options.selector).filter(function(event) {
-					return event !== 'on'; // Remove the "all" input (default value = "on")
-				}),
 				args = [];
 
-			for (var l = 0; l < list.length; l++)
-				args.push(
-					'node' + list[l] + bb + // Ask for nodes in the bbox
-					'way' + list[l] + bb // Also ask for areas
-				);
+			if (resolution < 30) // Only for small areas
+				for (var l = 0; l < list.length; l++)
+					args.push(
+						'node' + list[l] + bb + // Ask for nodes in the bbox
+						'way' + list[l] + bb // Also ask for areas
+					);
 
 			return options.url +
 				'?data=[timeout:5];(' + // Not too much !
@@ -674,8 +671,7 @@ function layerOverpass(options) {
 		style: function(properties) {
 			return {
 				image: new ol.style.Icon({
-					//src: '//www.refuges.info/images/icones/' + overpassType(properties) + '.png'
-					src: 'http://chemineur.fr/ext/Dominique92/GeoBB/types_points/' + overpassType(properties) + '.png'
+					src: '//dc9.fr/chemineur/ext/Dominique92/GeoBB/types_points/' + overpassType(properties) + '.png'
 				})
 			};
 		},
