@@ -5,7 +5,7 @@
  */
 //END test with libs non debug / on mobile
 //END http://jsbeautifier.org/ & http://jshint.com
-//TODO BEST Site off line, application
+//BEST Site off line, application
 
 /**
  * HACK send 'onAdd' event to layers when added to a map
@@ -24,7 +24,7 @@ ol.Map.prototype.renderFrame_ = function(time) {
 //***************************************************************
 // TILE LAYERS
 //***************************************************************
-//TODO BEST Superzoom
+//BEST Superzoom
 /**
  * Openstreetmap
  */
@@ -406,6 +406,7 @@ function layerVectorURL(options) {
 		initLayerVectorURLListeners(event.target.map_);
 
 		// Hover activity (coloring the feature)
+//TODO bug affiche la première étiquette à droite en masquant l'icone
 		if (typeof options.hover == 'function')
 			event.target.map_.addInteraction(new ol.interaction.Select({
 				layers: [layer],
@@ -488,20 +489,22 @@ function initLayerVectorURLListeners(map) {
 			return true; // Stop detection
 		}
 
-		// Click on feature
+		// Click on a feature
 		map.on('click', function(event) {
-			// Search the clicked the feature(s)
-			map.forEachFeatureAtPixel(event.pixel, checkFeatureAtPixelClicked, {
-				hitTolerance: 6
-			});
+			var e = event.originalEvent;
+			if (!e.shiftKey && !e.ctrlKey && !e.altKey)
+				map.forEachFeatureAtPixel(event.pixel, actionFeatureClicked, {
+					hitTolerance: 6
+				});
 		});
 
-		function checkFeatureAtPixelClicked(feature_, layer_) {
+		function actionFeatureClicked(feature_, layer_) {
 			if (layer_ && layer_.options_ && typeof layer_.options_.click == 'function')
 				layer_.options_.click(feature_.getProperties());
 		}
 	}
 }
+
 /**
  * www.refuges.info areas layer
  * Requires layerVectorURL
@@ -648,6 +651,7 @@ ol.inherits(ol.format.OSMXMLPOI, ol.format.OSMXML);
  * Doc: http://wiki.openstreetmap.org/wiki/Overpass_API/Language_Guide
  * Requires layerVectorURL
  */
+//BEST restos, wc
 function layerOverpass(options) {
 	var layer = layerVectorURL({
 		url: function(bbox, list, resolution) {
@@ -962,7 +966,7 @@ function controlLayersSwitcher(baseLayers) {
  * options.defaultPos {<ZOOM>/<LON>/<LAT>/<LAYER>} if nothing else is defined.
  */
 //TODO TEST ne marche pas quand clique sur un onglet avec un permalink dans Chrome
-//TODO BEST changer le hash du lien quand on zoome ?? Utile pour WRI ???
+//BEST changer le hash du lien quand on zoome ?? Utile pour WRI ???
 function controlPermalink(options) {
 	var divElement = document.createElement('div'),
 		aElement = document.createElement('a'),
@@ -1077,8 +1081,13 @@ function controlLengthLine() {
 
 			event.map.on(['pointermove'], function(event) {
 				divElement.innerHTML = ''; // Clear the measure if hover no feature
-				event.map.forEachFeatureAtPixel(event.pixel, calculateLength);
 			});
+
+			event.map.addInteraction(new ol.interaction.Select({
+				condition: ol.events.condition.pointerMove,
+				hitTolerance: 6,
+				filter: calculateLength // HACK : use of filter to perform an action
+			}));
 		}
 	}
 
@@ -1092,7 +1101,7 @@ function controlLengthLine() {
 			divElement.innerHTML = (Math.round(length / 1000 * 100) / 100) + ' km';
 		else if (length >= 1)
 			divElement.innerHTML = (Math.round(length)) + ' m';
-		return true; // Stop detection
+		return length > 0; // Continue hover if we are above a line
 	}
 
 	return control;
@@ -1102,7 +1111,7 @@ function controlLengthLine() {
  * GPX file loader control
  * Requires controlButton
  */
-//TODO BEST Pas d'upload/download sur mobile (-> va vers photos !)
+//BEST Pas d'upload/download sur mobile (-> va vers photos !)
 function controlLoadGPX() {
 	var inputElement = document.createElement('input'),
 		button = controlButton({
@@ -1182,10 +1191,13 @@ function controlDownloadGPX() {
 		if (!map) {
 			map = event.map;
 
-			// Perform selection if there is no active editor
+			// Make selection of lines if there is no active editor
 			if (!map.sourceEditor) {
 				var select = new ol.interaction.Select({
 					condition: ol.events.condition.click,
+					filter: function(f) {
+						return f.getGeometry().getType().indexOf('String') !== -1;
+					},
 					hitTolerance: 6
 				});
 				select.on('select', function(event) {
@@ -1289,10 +1301,8 @@ function controlsCollection() {
 /**
  * Line Editor
  * Requires controlButton
+ * Requires activated controlLengthLine
  */
-//TODO BUG pas de hover de la ligne sélectionnée
-//TODO BUG stick ne marche pas avec les traces de chemineur
-//TODO Inhiber les clicks si présence éditeur
 function controlLineEditor(id, snapLayers) {
 	var textareaElement = document.getElementById(id), // <textarea> element
 		format = new ol.format.GeoJSON(),
