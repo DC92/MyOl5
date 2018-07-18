@@ -2,6 +2,11 @@
  * OPENLAYERS V5 ADAPTATION - https://openlayers.org/
  * (C) Dominique Cavailhez 2017
  * https://github.com/Dominique92/MyOl
+ *
+ * I have designed this openlayers adaptation as simple as possible to make it maintained with basics JS skills
+ * You only have to include openlayers/dist .js & .css files & my 2 & that's it !
+ * No classes, no jquery, no es6 modules, no nodejs build nor minification, no npm repository, ... only a pack of JS functions & CSS
+ * I know, I know, this is not up to date way of programming but thtat's my choice & you are free to take it, modifiy & adapt as you wish
  */
 //END test with libs non debug / on mobile
 //END http://jsbeautifier.org/ & http://jshint.com
@@ -591,6 +596,9 @@ function chemineurLayer() {
 		},
 		hover: function(properties) {
 			return {
+				image: new ol.style.Icon({
+					src: properties.icone
+				}),
 				stroke: new ol.style.Stroke({
 					color: 'red',
 					width: 3
@@ -964,8 +972,6 @@ function controlLayersSwitcher(baseLayers) {
  * "map" url hash or cookie = {map=<ZOOM>/<LON>/<LAT>/<LAYER>}
  * options.defaultPos {<ZOOM>/<LON>/<LAT>/<LAYER>} if nothing else is defined.
  */
-//TODO TEST ne marche pas quand clique sur un onglet avec un permalink dans Chrome
-//BEST changer le hash du lien quand on zoome ?? Utile pour WRI ???
 function controlPermalink(options) {
 	var divElement = document.createElement('div'),
 		aElement = document.createElement('a'),
@@ -1065,7 +1071,7 @@ function controlGPS() {
 }
 
 /**
- * Control that displays the length of a line overflown
+ * Control to displays the length of a line overflown
  */
 function controlLengthLine() {
 	var divElement = document.createElement('div'),
@@ -1080,13 +1086,11 @@ function controlLengthLine() {
 
 			event.map.on(['pointermove'], function(event) {
 				divElement.innerHTML = ''; // Clear the measure if hover no feature
-			});
 
-			event.map.addInteraction(new ol.interaction.Select({
-				condition: ol.events.condition.pointerMove,
-				hitTolerance: 6,
-				filter: calculateLength // HACK : use of filter to perform an action
-			}));
+				event.map.forEachFeatureAtPixel(event.pixel, calculateLength, {
+					hitTolerance: 6
+				});
+			});
 		}
 	}
 
@@ -1100,7 +1104,7 @@ function controlLengthLine() {
 			divElement.innerHTML = (Math.round(length / 1000 * 100) / 100) + ' km';
 		else if (length >= 1)
 			divElement.innerHTML = (Math.round(length)) + ' m';
-		return length > 0; // Continue hover if we are above a line
+		return false; // Continue detection (for editor that has temporary layers)
 	}
 
 	return control;
@@ -1138,7 +1142,7 @@ function controlLoadGPX() {
 		if (map.sourceEditor) { // If there is an active editor
 			map.sourceEditor.addFeatures(features); // Add the track to the editor
 
-			// Zomm the map on the added features
+			// Zoom the map on the added features
 			var extent = ol.extent.createEmpty();
 			for (var f in features)
 				ol.extent.extend(extent, features[f].getGeometry().getExtent());
@@ -1190,20 +1194,20 @@ function controlDownloadGPX() {
 		if (!map) {
 			map = event.map;
 
-			// Make selection of lines if there is no active editor
-			if (!map.sourceEditor) {
-				var select = new ol.interaction.Select({
-					condition: ol.events.condition.click,
-					filter: function(f) {
-						return f.getGeometry().getType().indexOf('String') !== -1;
-					},
-					hitTolerance: 6
-				});
-				select.on('select', function(event) {
-					selectedFeatures = event.target.getFeatures().getArray();
-				});
-				map.addInteraction(select);
-			}
+			// Selection of lines
+			var select = new ol.interaction.Select({
+				condition: function(event) {
+					return ol.events.condition.shiftKeyOnly(event) && ol.events.condition.click(event);
+				},
+				filter: function(f) {
+					return f.getGeometry().getType().indexOf('String') !== -1;
+				},
+				hitTolerance: 6
+			});
+			select.on('select', function(event) {
+				selectedFeatures = event.target.getFeatures().getArray();
+			});
+			map.addInteraction(select);
 		}
 	}
 
@@ -1332,6 +1336,11 @@ function controlLineEditor(id, snapLayers) {
 			draw: new ol.interaction.Draw({
 				source: source,
 				type: 'LineString'
+			}),
+			hover: new ol.interaction.Select({
+				layers: [layer],
+				condition: ol.events.condition.pointerMove,
+				hitTolerance: 6
 			})
 		},
 		editMode = true, // Versus false if insert line mode
@@ -1387,7 +1396,9 @@ function controlLineEditor(id, snapLayers) {
 			map.removeInteraction(interactions[i]);
 		map.addInteraction(editMode ? interactions.modify : interactions.draw);
 		map.addInteraction(interactions.snap);
+		map.addInteraction(interactions.hover);
 	}
+
 	interactions.draw.on(['drawend'], function() {
 		setMode(true); // We close the line creation mode
 	});
@@ -1403,45 +1414,45 @@ function controlLineEditor(id, snapLayers) {
 	});
 
 	// Removes a line, a segment, and breaks a line in 2
-	interactions.modify.on('modifyend', function(event) {
+	interactions.modify.on('modifyend', function(e) {
 		// We retrieve the list of targeted features
-		var features = event.mapBrowserEvent.map.getFeaturesAtPixel(event.mapBrowserEvent.pixel, {
+		var event = e.mapBrowserEvent,
+			features = map.getFeaturesAtPixel(event.pixel, {
 				hitTolerance: 6
 			}),
 			pointer = null,
 			line = null;
+
 		for (var f in features)
-			if (features[f].getGeometry().flatCoordinates.length == 2)
-				pointer = features[f];
+			if (features[f].getGeometry().getType().indexOf('String') !== -1)
+				line = features[f]; // The targetted line
 			else
-				line = features[f];
+				pointer = features[f]; // The pointer
 
 		if (pointer && line &&
-			event.mapBrowserEvent.type == 'pointerup') {
+			event.type == 'pointerup' &&
+			event.originalEvent.altKey) {
+			source.removeFeature(line); // We delete the line
 
-			if (event.mapBrowserEvent.originalEvent.altKey) {
-				source.removeFeature(line); // We delete the line
+			if (!event.originalEvent.ctrlKey) {
+				var cp = pointer.getGeometry().flatCoordinates, // The coordinates of the cut point marker
+					vc = line.getGeometry().flatCoordinates, // The coordinates of the vertices of the line to be cut
+					cs = [[],[]], // [[],[]], // The coordinates of the 2 cut segments
+					s = 0;
+				for (var cl = 0; cl < vc.length; cl += line.getGeometry().stride)
+					// If we found the cutoff point
+					if (cp[0] == vc[cl] && cp[1] == vc[cl + 1])
+						s++; // We skip it and increment the segment counter
+					else // We add the current point
+						cs[s].push(vc.slice(cl));
 
-				if (!event.mapBrowserEvent.originalEvent.ctrlKey) {
-					var cp = pointer.getGeometry().flatCoordinates, // The coordinates of the cut point marker
-						vc = line.getGeometry().flatCoordinates, // The coordinates of the vertices of the line to be cut
-						cs = [[],[]], // [[],[]], // The coordinates of the 2 cut segments
-						s = 0;
-					for (var cl = 0; cl < vc.length; cl += line.getGeometry().stride)
-						// If we found the cutoff point
-						if (cp[0] == vc[cl] && cp[1] == vc[cl + 1])
-							s++; // We skip it and increment the segment counter
-						else // We add the current point
-							cs[s].push(vc.slice(cl));
+				// We draw the 2 ends of lines
+				for (var c in cs)
+					if (cs[c].length > 1) // If they have at least 2 points
+						source.addFeature(new ol.Feature({
+							geometry: new ol.geom.LineString(cs[c], line.getGeometry().layout)
+						}));
 
-					// We draw the 2 ends of lines
-					for (var c in cs)
-						if (cs[c].length > 1) // If they have at least 2 points
-							source.addFeature(new ol.Feature({
-								geometry: new ol.geom.LineString(cs[c], line.getGeometry().layout)
-							}));
-
-				}
 			}
 		}
 		stickLines();
@@ -1454,7 +1465,7 @@ function controlLineEditor(id, snapLayers) {
 		for (var f in fs)
 			if (fs[f].getGeometry().getType().indexOf('String') !== -1) { // If it contains strings
 				var cs = fs[f].getGeometry().getCoordinates();
-				if (fs[f].getGeometry().getType() == 'LineString')
+				if (fs[f].getGeometry().getType().indexOf('String') !== -1)
 					cs = [cs];
 				for (var c in cs) {
 					var coordinates = cs[c];
