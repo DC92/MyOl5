@@ -478,9 +478,11 @@ function initLayerVectorURLListeners(map) {
 				var pixel = map.getPixelFromCoordinate(coordinates);
 				if (pixel[1] < map.popElement_.clientHeight + 12) { // On the top of the map (not enough space for it)
 					pixel[0] += pixel[0] < map.getSize()[0] / 2 ? 10 : -map.popElement_.clientWidth - 10;
-					pixel[1] += 2 - pixel[1];
+					pixel[1] = 2;
 				} else {
-					pixel[0] -= map.popElement_.clientWidth * pixel[0] / map.getSize()[0];
+					pixel[0] -= map.popElement_.clientWidth / 2;
+					pixel[0] = Math.max(pixel[0], 0); // Bord gauche
+					pixel[0] = Math.min(pixel[0], map.getSize()[0] - map.popElement_.clientWidth - 1); // Bord droit
 					pixel[1] -= map.popElement_.clientHeight + 10;
 				}
 				popup.setPosition(map.getCoordinateFromPixel(pixel));
