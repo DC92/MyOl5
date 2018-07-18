@@ -406,7 +406,6 @@ function layerVectorURL(options) {
 		initLayerVectorURLListeners(event.target.map_);
 
 		// Hover activity (coloring the feature)
-//TODO bug affiche la première étiquette à droite en masquant l'icone
 		if (typeof options.hover == 'function')
 			event.target.map_.addInteraction(new ol.interaction.Select({
 				layers: [layer],
@@ -459,7 +458,16 @@ function initLayerVectorURLListeners(map) {
 					ll4326 = ol.proj.transform(coordinates, 'EPSG:3857', 'EPSG:4326');
 				if (coordinates.length != 2)
 					coordinates = event.coordinate; // If it's a surface, over the pointer
-				popup.setPosition(map.getView().getCenter()); // For popup size adjustment
+				popup.setPosition(map.getView().getCenter()); // For popup size calculation
+
+				// Fill label class & text
+				var properties = feature_.getProperties();
+				properties.lon = Math.round(ll4326[0] * 100000) / 100000;
+				properties.lat = Math.round(ll4326[1] * 100000) / 100000;
+				map.popElement_.className = 'popup ' + (layer_.options_.labelClass || '');
+				map.popElement_.innerHTML = typeof layer_.options_.label == 'function' ?
+					layer_.options_.label(properties, feature_, layer_) :
+					layer_.options_.label || '';
 
 				// Shift of the label to stay into the map regarding the pointer position
 				var pixel = map.getPixelFromCoordinate(coordinates);
@@ -471,15 +479,6 @@ function initLayerVectorURLListeners(map) {
 					pixel[1] -= map.popElement_.clientHeight + 10;
 				}
 				popup.setPosition(map.getCoordinateFromPixel(pixel));
-
-				// Fill label class & text
-				var properties = feature_.getProperties();
-				properties.lon = Math.round(ll4326[0] * 100000) / 100000;
-				properties.lat = Math.round(ll4326[1] * 100000) / 100000;
-				map.popElement_.className = 'popup ' + (layer_.options_.labelClass || '');
-				map.popElement_.innerHTML = typeof layer_.options_.label == 'function' ?
-					layer_.options_.label(properties, feature_, layer_) :
-					layer_.options_.label || '';
 			}
 
 			// Hover a clikable feature
