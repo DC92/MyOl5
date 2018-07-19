@@ -239,7 +239,7 @@ function layerBing(layer, key) {
 	});
 }
 
-//TODO BEST éviter d'appeler à l'init https://dev.virtualearth.net sur les cartes BING
+//BEST éviter d'appeler à l'init https://dev.virtualearth.net sur les cartes BING
 /**
  * Ordnance Survey : Great Britain
  * Requires layerTileIncomplete
@@ -368,7 +368,6 @@ ol.loadingstrategy.bboxDependant = function(extent, resolution) {
 	return [extent];
 };
 
-//TODO BEST écarteur de pictos trop proches
 /**
  * GeoJson POI layer
  * Requires 'onadd' layer event
@@ -408,18 +407,35 @@ function layerVectorURL(options) {
 
 	layer.options_ = options; //HACK Mem options for interactions
 	layer.on('onadd', function(event) {
-		initLayerVectorURLListeners(event.target.map_);
+		var map = event.target.map_;
+		initLayerVectorURLListeners(map);
 
-		// Hover activity (coloring the feature)
-		if (typeof options.hover == 'function')
-			event.target.map_.addInteraction(new ol.interaction.Select({
-				layers: [layer],
-				condition: ol.events.condition.pointerMove,
-				hitTolerance: 6, // Similar to other defaults
-				style: function(feature) {
-					return new ol.style.Style(options.hover(feature.getProperties()));
+		// Hover activity
+		map.addInteraction(new ol.interaction.Select({
+			layers: [layer],
+			condition: ol.events.condition.pointerMove,
+			multi: true,
+			hitTolerance: 6, // Similar to other defaults
+			style: function(feature) {
+				// Spread too close features
+				var featurePixel = map.getPixelFromCoordinate(feature.getGeometry().getCoordinates()),
+					delta = [0, 0];
+				map.forEachFeatureAtPixel(featurePixel, function(f) {
+					var pixelOtherFeature = map.getPixelFromCoordinate(f.getGeometry().getCoordinates());
+					if (!isNaN(pixelOtherFeature[0])) { // Exclude lines
+						delta[0] += pixelOtherFeature[0] - featurePixel[0];
+						delta[1] += pixelOtherFeature[1] - featurePixel[1];
+					}
+				});
+				var div = (Math.abs(delta[0]) + Math.abs(delta[1])) * 3, // Normalise spreading
+					style = (options.hover || options.style)(feature.getProperties()); // Apply hover if any
+				if (style.image && div) {
+					style.image.anchor_[0] += delta[0] / div;
+					style.image.anchor_[1] += delta[1] / div;
 				}
-			}));
+				return new ol.style.Style(style);
+			}
+		}));
 	});
 
 	return layer;
