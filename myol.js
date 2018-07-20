@@ -420,11 +420,12 @@ function layerVectorURL(options) {
 				// Spread too close features
 				var featurePixel = map.getPixelFromCoordinate(feature.getGeometry().getCoordinates()),
 					delta = [0, 0];
+				featurePixel[0] += 1 / feature.ol_uid; // Add random epsilon to disjoin identical points
 				map.forEachFeatureAtPixel(featurePixel, function(f) {
 					var pixelOtherFeature = map.getPixelFromCoordinate(f.getGeometry().getCoordinates());
 					if (!isNaN(pixelOtherFeature[0])) { // Exclude lines
-						delta[0] += pixelOtherFeature[0] - featurePixel[0];
-						delta[1] += pixelOtherFeature[1] - featurePixel[1];
+						delta[0] += featurePixel[0] - pixelOtherFeature[0] - 1 / f.ol_uid;
+						delta[1] += featurePixel[1] - pixelOtherFeature[1];
 					}
 				});
 				var div = (Math.abs(delta[0]) + Math.abs(delta[1])) * 3, // Normalise spreading
