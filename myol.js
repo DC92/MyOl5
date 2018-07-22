@@ -470,6 +470,8 @@ function initLayerVectorURLListeners(map) {
 			map.forEachFeatureAtPixel(event.pixel, checkFeatureAtPixelHovered);
 		});
 
+//TODO BUG picto chemineur dédoublé (vu en survolant)
+//TODO BUG pictio WRI unique déplacé sur la gauche par hover
 		function checkFeatureAtPixelHovered(feature_, layer_) {
 			// Feature's icons
 			if (!popup.getPosition() && // Only for the first feature on the hovered stack
