@@ -125,6 +125,21 @@ function layerIGN(key, layer, format) {
 }
 
 /**
+ * Spain
+ */
+function layerSpain(serveur, layer) {
+	return new ol.layer.Tile({
+		source: new ol.source.XYZ({
+			url: '//www.ign.es/wmts/' + serveur + '?layer=' + layer +
+				'&Service=WMTS&Request=GetTile&Version=1.0.0&Format=image/jpeg' +
+				'&style=default&tilematrixset=GoogleMapsCompatible' +
+				'&TileMatrix={z}&TileCol={x}&TileRow={y}',
+			attributions: '&copy; <a href="http://www.ign.es/">IGN España</a>'
+		})
+	});
+}
+
+/**
  * Layers with not all resolutions or area available
  * Virtual class
  * Displays OSM outside the zoom area, 
@@ -213,33 +228,6 @@ function layerIGM() {
 	});
 }
 
-/**
- * Spain
- */
-function layerSpain(serveur, layer) {
-	return new ol.layer.Tile({
-		source: new ol.source.XYZ({
-			url: '//www.ign.es/wmts/' + serveur + '?layer=' + layer +
-				'&Service=WMTS&Request=GetTile&Version=1.0.0&Format=image/jpeg' +
-				'&style=default&tilematrixset=GoogleMapsCompatible' +
-				'&TileMatrix={z}&TileCol={x}&TileRow={y}',
-			attributions: '&copy; <a href="http://www.ign.es/">IGN España</a>'
-		})
-	});
-}
-
-/**
- * Bing (Microsoft)
- */
-function layerBing(layer, key) {
-	return new ol.layer.Tile({
-		source: new ol.source.BingMaps({
-			imagerySet: layer,
-			key: key,
-		})
-	});
-}
-
 //BEST éviter d'appeler à l'init https://dev.virtualearth.net sur les cartes BING
 /**
  * Ordnance Survey : Great Britain
@@ -255,53 +243,15 @@ function layerOS(key) {
 }
 
 /**
- * Tile layers examples
- * Requires many
+ * Bing (Microsoft)
  */
-function layersCollection(keys) {
-	return {
-		'OSM-FR': layerOSM('//{a-c}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png'),
-		'OSM': layerOSM('//{a-c}.tile.openstreetmap.org/{z}/{x}/{y}.png'),
-		'MRI': layerOSM(
-			'//maps.refuges.info/hiking/{z}/{x}/{y}.png',
-			'<a href="http://wiki.openstreetmap.org/wiki/Hiking/mri">MRI</a>'
-		),
-		'Hike & Bike': layerOSM(
-			'http://{a-c}.tiles.wmflabs.org/hikebike/{z}/{x}/{y}.png',
-			'<a href="http://www.hikebikemap.org/">hikebikemap.org</a>'
-		), // Not on https
-		'Autriche': layerKompass('KOMPASS Touristik'),
-		//'Kompas': layerKompass(, 'KOMPASS'),
-		//'Kompas summer': layerKompass('Summer OSM'),
-		//'Kompas winter': layerKompass('Winter OSM'),
-		//'Kompas luftbild': layerKompass('a'),
-		'OSM-outdoors': layerThunderforest('outdoors', keys.thunderforest),
-		'OSM-cycle': layerThunderforest('cycle', keys.thunderforest),
-		'OSM-landscape': layerThunderforest('landscape', keys.thunderforest),
-		'OSM-transport': layerThunderforest('transport', keys.thunderforest),
-		'IGN': layerIGN(keys.IGN, 'GEOGRAPHICALGRIDSYSTEMS.MAPS'),
-		'IGN photos': layerIGN(keys.IGN, 'ORTHOIMAGERY.ORTHOPHOTOS'),
-		'IGN TOP 25': layerIGN(keys.IGN, 'GEOGRAPHICALGRIDSYSTEMS.MAPS.SCAN-EXPRESS.STANDARD'),
-		'IGN classique': layerIGN(keys.IGN, 'GEOGRAPHICALGRIDSYSTEMS.MAPS.SCAN-EXPRESS.CLASSIQUE'),
-		// NOT YET	layerIGN('IGN avalanches', keys.IGN,'GEOGRAPHICALGRIDSYSTEMS.SLOPES.MOUNTAIN'),
-		'Cadastre': layerIGN(keys.IGN, 'CADASTRALPARCELS.PARCELS', 'image/png'),
-		'Swiss': layerSwissTopo('ch.swisstopo.pixelkarte-farbe'),
-		'Swiss photo': layerSwissTopo('ch.swisstopo.swissimage'),
-		'Espagne': layerSpain('mapa-raster', 'MTN'),
-		'Espagne photo': layerSpain('pnoa-ma', 'OI.OrthoimageCoverage'),
-		'Italie': layerIGM(),
-		'Angleterre': layerOS(keys.bing),
-		'Bing': layerBing('Road', keys.bing),
-		'Bing photo': layerBing('Aerial', keys.bing),
-		//'Bing mixte': layerBing ('AerialWithLabels', bingKey),
-		'Google road': layerGoogle('m'),
-		'Google terrain': layerGoogle('p'),
-		'Google photo': layerGoogle('s'),
-		'Google hybrid': layerGoogle('s,h'),
-		Stamen: layerStamen('terrain'),
-		Watercolor: layerStamen('watercolor'),
-		'Neutre': new ol.layer.Tile()
-	};
+function layerBing(layer, key) {
+	return new ol.layer.Tile({
+		source: new ol.source.BingMaps({
+			imagerySet: layer,
+			key: key,
+		})
+	});
 }
 
 //***************************************************************
@@ -407,46 +357,14 @@ function layerVectorURL(options) {
 	}
 
 	layer.options_ = options; //HACK Mem options for interactions
-	layer.on('onadd', function(event) {
-		var map = event.target.map_;//TODO toujours nécéssaire ???
-		initLayerVectorURLListeners(map);
-
-/*
-		// Hover activity
-		map.addInteraction(new ol.interaction.Select({
-			layers: [layer],
-			condition: ol.events.condition.pointerMove,
-			multi: true,
-			hitTolerance: 6, // Similar to other defaults
-			style: function(feature) {
-				// Spread too close features
-				var featurePixel = map.getPixelFromCoordinate(feature.getGeometry().getCoordinates()),
-					delta = [0, 0];
-				featurePixel[0] += 1 / feature.ol_uid; // Add random epsilon to disjoin identical points
-				map.forEachFeatureAtPixel(featurePixel, function(f) {
-					var pixelOtherFeature = map.getPixelFromCoordinate(f.getGeometry().getCoordinates());
-					if (!isNaN(pixelOtherFeature[0])) { // Exclude lines
-						delta[0] += featurePixel[0] - pixelOtherFeature[0] - 1 / f.ol_uid;
-						delta[1] += featurePixel[1] - pixelOtherFeature[1];
-					}
-				});
-				var div = (Math.abs(delta[0]) + Math.abs(delta[1])) * 3, // Normalise spreading
-					style = (options.hover || options.style)(feature.getProperties()); // Apply hover if any
-				if (style.image && div) {
-					style.image.anchor_[0] += delta[0] / div;
-					style.image.anchor_[1] += delta[1] / div;
-				}
-				return new ol.style.Style(style);
-			}
-		}));
-*/
-	});
+	layer.on('onadd', initLayerVectorURLListeners);
 
 	return layer;
 }
 
 // We use only one listener for hover and one for click for all vector layers
-function initLayerVectorURLListeners(map) {
+function initLayerVectorURLListeners(e) {
+	var map = e.target.map_;
 	if (!map.popElement_) { //HACK Only once for all layers
 
 		// Display a label when hover the feature
@@ -559,112 +477,6 @@ function initLayerVectorURLListeners(map) {
 				layer_.options_.click(feature_.getProperties());
 		}
 	}
-}
-
-/**
- * www.refuges.info areas layer
- * Requires layerVectorURL
- */
-function layerMassifsWri() {
-	return layerVectorURL({
-		url: '//www.refuges.info/api/polygones?type_polygon=1',
-		selector: 'wri-massifs',
-		style: function(properties) {
-			// Translates the color in RGBA to be transparent
-			var cs = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(properties.couleur);
-			return {
-				fill: new ol.style.Fill({
-					color: 'rgba(' + parseInt(cs[1], 16) + ',' + parseInt(cs[2], 16) + ',' + parseInt(cs[3], 16) + ',0.5)'
-				}),
-				stroke: new ol.style.Stroke({
-					color: 'black'
-				})
-			};
-		},
-		label: function(properties) {
-			return properties.nom;
-		},
-		hover: function(properties) {
-			return {
-				fill: new ol.style.Fill({
-					color: properties.couleur
-				}),
-				stroke: new ol.style.Stroke({
-					color: 'black'
-				})
-			};
-		},
-		click: function(properties) {
-			if (properties.lien)
-				window.location.href = properties.lien;
-		}
-	});
-}
-
-/**
- * www.refuges.info POI layer
- * Requires layerVectorURL
- */
-function layerPointsWri() {
-	return layerVectorURL({
-		url: '//www.refuges.info/api/bbox?type_points=',
-		selector: 'wri-poi',
-		style: function(properties) {
-			return {
-				image: new ol.style.Icon({
-					src: '//www.refuges.info/images/icones/' + properties.type.icone + '.png'
-				})
-			};
-		},
-		label: function(properties) {
-			return properties.nom;
-		},
-		click: function(properties) {
-			if (properties.lien)
-				window.location.href = properties.lien;
-		}
-	});
-}
-
-/**
- * chemineur.fr POI layer
- * Requires layerVectorURL
- */
-function chemineurLayer() {
-	return layerVectorURL({
-		url: '//dc9.fr/chemineur/ext/Dominique92/GeoBB/gis.php?site=this&poi=3,8,16,20,23,28,30,40,44,64,58,62,65',
-		selector: 'chemineur',
-		style: function(properties) {
-			return {
-				// POI
-				image: new ol.style.Icon({
-					src: properties.icone
-				}),
-				// Traces
-				stroke: new ol.style.Stroke({
-					color: 'blue'
-				})
-			};
-		},
-		hover: function(properties) {
-			return {
-				image: new ol.style.Icon({
-					src: properties.icone
-				}),
-				stroke: new ol.style.Stroke({
-					color: 'red',
-					width: 3
-				})
-			};
-		},
-		label: function(properties) {
-			return properties.nom;
-		},
-		click: function(properties) {
-			if (properties.url)
-				window.location.href = properties.url;
-		}
-	});
 }
 
 /**
@@ -1295,9 +1107,7 @@ function controlDownloadGPX() {
 	return button;
 }
 
-/**
- * HACK to display a title on the geocoder
- */
+// HACK to display a title on the geocoder
 window.addEventListener('load', function() {
 	var buttonElement = document.getElementById('gcd-button-control');
 	if (buttonElement)
@@ -1305,52 +1115,17 @@ window.addEventListener('load', function() {
 }, true);
 
 /**
- * Controls examples
- * Requires many
+ * Print control
  */
-function controlsCollection() {
-	return [
-		new ol.control.ScaleLine(),
-		new ol.control.MousePosition({
-			coordinateFormat: ol.coordinate.createStringXY(5),
-			projection: 'EPSG:4326',
-			className: 'ol-coordinate',
-			undefinedHTML: String.fromCharCode(0)
-		}),
-		new ol.control.Attribution({
-			collapsible: false // Attribution always open
-		}),
-		new ol.control.Zoom(),
-		new ol.control.FullScreen({
-			label: '',
-			labelActive: '',
-			tipLabel: 'Plein écran'
-		}),
-		controlLengthLine(),
-		controlPermalink({
-			init: true,
-			visible: true
-		}),
-		// Requires https://github.com/jonataswalker/ol-geocoder/tree/master/dist
-		// Requires hack to display a title on the geocoder
-		new Geocoder('nominatim', {
-			provider: 'osm',
-			lang: 'FR',
-			keepOpen: true,
-			placeholder: 'Saisir un nom' // Initialization of the input field
-		}),
-		controlGPS(),
-		controlLoadGPX(),
-		controlDownloadGPX(),
+function controlPrint() {
 //TODO impression full format page -> CSS
-		controlButton({
-			className: 'print-button',
-			title: 'Imprimer la carte',
-			action: function() {
-				window.print();
-			}
-		})
-	];
+	return controlButton({
+		className: 'print-button',
+		title: 'Imprimer la carte',
+		action: function() {
+			window.print();
+		}
+	})
 }
 
 /**
@@ -1358,6 +1133,7 @@ function controlsCollection() {
  * Requires controlButton
  * Requires activated controlLengthLine
  */
+//TODO BUG n'hover pas, quelquefois
 function controlLineEditor(id, snapLayers) {
 	var textareaElement = document.getElementById(id), // <textarea> element
 		format = new ol.format.GeoJSON(),
