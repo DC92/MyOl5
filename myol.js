@@ -11,6 +11,7 @@
 //END test with libs non debug / on mobile
 //END http://jsbeautifier.org/ & http://jshint.com
 //BEST Site off line, application
+//TODO mettre collections -> index.js
 
 /**
  * HACK send 'onAdd' event to layers when added to a map
@@ -407,9 +408,10 @@ function layerVectorURL(options) {
 
 	layer.options_ = options; //HACK Mem options for interactions
 	layer.on('onadd', function(event) {
-		var map = event.target.map_;
+		var map = event.target.map_;//TODO toujours nécéssaire ???
 		initLayerVectorURLListeners(map);
 
+/*
 		// Hover activity
 		map.addInteraction(new ol.interaction.Select({
 			layers: [layer],
@@ -437,6 +439,7 @@ function layerVectorURL(options) {
 				return new ol.style.Style(style);
 			}
 		}));
+*/
 	});
 
 	return layer;
@@ -453,7 +456,7 @@ function initLayerVectorURLListeners(map) {
 		});
 		map.addOverlay(popup);
 
-		var event;
+		var event, hoveredFeatures = [];
 		map.on('pointermove', function(e) {
 			event = e; // Mem the event for callback functions
 
@@ -466,26 +469,55 @@ function initLayerVectorURLListeners(map) {
 				popupRect.top - 5 > mapRect.y + event.pixel[1] || mapRect.y + event.pixel[1] >= popupRect.bottom + 5)
 				popup.setPosition(undefined); // Hide label by default if none feature or his popup here
 
+			// Reset previous hovered styles
+			if (hoveredFeatures)
+				hoveredFeatures.forEach(function(feature) {
+					var style = feature.layer_.options_.style(feature.getProperties());
+					feature.setStyle(new ol.style.Style(style));
+				});
+
 			// Search the hovered the feature(s)
-			map.forEachFeatureAtPixel(event.pixel, checkFeatureAtPixelHovered);
+			map.forEachFeatureAtPixel(event.pixel, checkFeatureAtPixelHovered, {
+				hitTolerance: 8
+			});
+
+			hoveredFeatures = map.getFeaturesAtPixel(event.pixel);
+			if (hoveredFeatures && hoveredFeatures.length > 1) {
+				hoveredFeatures.sort(function(a, b) {
+					return a.pixel_[0] - b.pixel_[0];
+				});
+				var dx = .4, // Spread too closes icons
+					xAnchor = .5 + dx * (hoveredFeatures.length - 1) / 2;
+				hoveredFeatures.forEach(function(feature) {
+					// Apply hover if any
+					var style = (feature.layer_.options_.hover || feature.layer_.options_.style)(feature.getProperties());
+					// Shift icon if too many grouped here
+					if (style.image) {
+						style.image.anchor_[0] = xAnchor;
+						xAnchor -= dx;
+					}
+					feature.setStyle(new ol.style.Style(style));
+				});
+			}
 		});
 
-//TODO BUG picto chemineur dédoublé (vu en survolant)
-//TODO BUG pictio WRI unique déplacé sur la gauche par hover
 		function checkFeatureAtPixelHovered(feature_, layer_) {
+			feature_.layer_ = layer_;
+			var coordinates = feature_.getGeometry().flatCoordinates, // If it's a point, just over it
+				ll4326 = ol.proj.transform(coordinates, 'EPSG:3857', 'EPSG:4326'),
+				pixel = feature_.pixel_ = map.getPixelFromCoordinate(coordinates),
+				properties = feature_.getProperties();
+
 			// Feature's icons
 			if (!popup.getPosition() && // Only for the first feature on the hovered stack
 				layer_ && layer_.options_) {
 
 				// Calculate the label' anchor
-				var coordinates = feature_.getGeometry().flatCoordinates, // If it's a point, just over it
-					ll4326 = ol.proj.transform(coordinates, 'EPSG:3857', 'EPSG:4326');
 				if (coordinates.length != 2)
 					coordinates = event.coordinate; // If it's a surface, over the pointer
 				popup.setPosition(map.getView().getCenter()); // For popup size calculation
 
 				// Fill label class & text
-				var properties = feature_.getProperties();
 				properties.lon = Math.round(ll4326[0] * 100000) / 100000;
 				properties.lat = Math.round(ll4326[1] * 100000) / 100000;
 				map.popElement_.className = 'popup ' + (layer_.options_.labelClass || '');
@@ -494,7 +526,6 @@ function initLayerVectorURLListeners(map) {
 					layer_.options_.label || '';
 
 				// Shift of the label to stay into the map regarding the pointer position
-				var pixel = map.getPixelFromCoordinate(coordinates);
 				if (pixel[1] < map.popElement_.clientHeight + 12) { // On the top of the map (not enough space for it)
 					pixel[0] += pixel[0] < map.getSize()[0] / 2 ? 10 : -map.popElement_.clientWidth - 10;
 					pixel[1] = 2;
@@ -511,7 +542,7 @@ function initLayerVectorURLListeners(map) {
 			if (layer_ && layer_.options_ && layer_.options_.click)
 				map.getViewport().style.cursor = 'pointer';
 
-			return true; // Stop detection
+			return false; // Continue detection on other features at the same location
 		}
 
 		// Click on a feature
