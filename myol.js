@@ -365,18 +365,19 @@ function layerVectorURL(options) {
 function initLayerVectorURLListeners(e) {
 	var map = e.target.map_;
 	if (!map.popElement_) { //HACK Only once for all layers
-
 		// Display a label when hover the feature
 		map.popElement_ = document.createElement('div');
-		var popup = new ol.Overlay({
-			element: map.popElement_
-		});
+		var dx = 0.4,
+			xAnchor, // Spread too closes icons
+			hovered = [],
+			popup = new ol.Overlay({
+				element: map.popElement_
+			});
 		map.addOverlay(popup);
 
-		var event, hoveredFeatures = [];
-		map.on('pointermove', function(e) {
-			event = e; // Mem the event for callback functions
+		map.on('pointermove', pointerMove);
 
+		function pointerMove(event) {
 			// Reset cursor & popup position
 			map.getViewport().style.cursor = 'default'; // To get the default cursor if there is no feature here
 
@@ -387,96 +388,99 @@ function initLayerVectorURLListeners(e) {
 				popup.setPosition(undefined); // Hide label by default if none feature or his popup here
 
 			// Reset previous hovered styles
-			if (hoveredFeatures)
-				hoveredFeatures.forEach(function(feature) {
-					if (feature.layer_ && feature.layer_.options_)
-						feature.setStyle(new ol.style.Style(feature.layer_.options_.style(feature.getProperties())));
+			if (hovered)
+				hovered.forEach(function(h) {
+					if (h.layer && h.options)
+						h.feature.setStyle(new ol.style.Style(h.options.style(h.feature.getProperties())));
 				});
 
 			// Search the hovered the feature(s)
-			map.forEachFeatureAtPixel(event.pixel, checkFeatureAtPixelHovered, {
-				hitTolerance: 8
+			hovered = [];
+			map.forEachFeatureAtPixel(event.pixel, function(f, l) {
+				if (l && l.options_) {
+					var h = {
+						event: event,
+						feature: f,
+						layer: l,
+						options: l.options_,
+						properties: f.getProperties(),
+						coordinates: f.getGeometry().flatCoordinates // If it's a point, just over it
+					};
+					h.pixel = map.getPixelFromCoordinate(h.coordinates);
+					h.ll4326 = ol.proj.transform(h.coordinates, 'EPSG:3857', 'EPSG:4326');
+					hovered.push(h);
+				}
 			});
 
-			hoveredFeatures = map.getFeaturesAtPixel(event.pixel);
-			if (hoveredFeatures && hoveredFeatures.length > 1) {
-				hoveredFeatures.sort(function(a, b) {
-					return a.pixel_[0] - b.pixel_[0];
+			if (hovered) {
+				// Sort features left to right
+				hovered.sort(function(a, b) {
+					return a.pixel[0] - b.pixel[0];
 				});
-				var dx = .4, // Spread too closes icons
-					xAnchor = .5 + dx * (hoveredFeatures.length - 1) / 2;
-				hoveredFeatures.forEach(function(feature) {
-					if (feature.layer_ && feature.layer_.options_) {
-						// Apply hover if any
-						var style = (feature.layer_.options_.hover || feature.layer_.options_.style)(feature.getProperties());
-						// Shift icon if too many grouped here
-						if (style.image) {
-							style.image.anchor_[0] = xAnchor;
-							xAnchor -= dx;
-						}
-						feature.setStyle(new ol.style.Style(style));
-					}
-				});
+				xAnchor = 0.5 + dx * (hovered.length - 1) / 2;
+				hovered.forEach(checkHovered);
 			}
-		});
+		}
 
-		function checkFeatureAtPixelHovered(feature_, layer_) {
-			feature_.layer_ = layer_;
-			var coordinates = feature_.getGeometry().flatCoordinates, // If it's a point, just over it
-				ll4326 = ol.proj.transform(coordinates, 'EPSG:3857', 'EPSG:4326'),
-				pixel = feature_.pixel_ = map.getPixelFromCoordinate(coordinates),
-				properties = feature_.getProperties();
+		function checkHovered(h) {
+			// Hover a clikable feature
+			if (h.options.click)
+				map.getViewport().style.cursor = 'pointer';
 
-			// Feature's icons
-			if (!popup.getPosition() && // Only for the first feature on the hovered stack
-				layer_ && layer_.options_) {
+			// Apply hover if any
+			var style = (h.options.hover || h.options.style)(h.feature.getProperties());
 
+			// Shift icon if too many grouped here
+			if (hovered.length > 1 &&
+				style.image) {
+				style.image.anchor_[0] = xAnchor;
+				xAnchor -= dx;
+			}
+			h.feature.setStyle(new ol.style.Style(style));
+
+			if (!popup.getPosition()) { // Only for the first feature on the hovered stack
 				// Calculate the label' anchor
-				if (coordinates.length != 2)
-					coordinates = event.coordinate; // If it's a surface, over the pointer
+				if (h.coordinates.length != 2)
+					h.coordinates = h.event.coordinate; // If it's a surface, over the pointer
 				popup.setPosition(map.getView().getCenter()); // For popup size calculation
 
 				// Fill label class & text
-				properties.lon = Math.round(ll4326[0] * 100000) / 100000;
-				properties.lat = Math.round(ll4326[1] * 100000) / 100000;
-				map.popElement_.className = 'popup ' + (layer_.options_.labelClass || '');
-				map.popElement_.innerHTML = typeof layer_.options_.label == 'function' ?
-					layer_.options_.label(properties, feature_, layer_) :
-					layer_.options_.label || '';
+				h.properties.lon = Math.round(h.ll4326[0] * 100000) / 100000;
+				h.properties.lat = Math.round(h.ll4326[1] * 100000) / 100000;
+				map.popElement_.className = 'popup ' + (h.layer.options_.labelClass || '');
+				map.popElement_.innerHTML = typeof h.options.label == 'function' ?
+					h.options.label(h.properties, h.feature, h.layer) :
+					h.options.label || '';
 
 				// Shift of the label to stay into the map regarding the pointer position
-				if (pixel[1] < map.popElement_.clientHeight + 12) { // On the top of the map (not enough space for it)
-					pixel[0] += pixel[0] < map.getSize()[0] / 2 ? 10 : -map.popElement_.clientWidth - 10;
-					pixel[1] = 2;
+				if (h.pixel[1] < map.popElement_.clientHeight + 12) { // On the top of the map (not enough space for it)
+					h.pixel[0] += h.pixel[0] < map.getSize()[0] / 2 ? 10 : -map.popElement_.clientWidth - 10;
+					h.pixel[1] = 2;
 				} else {
-					pixel[0] -= map.popElement_.clientWidth / 2;
-					pixel[0] = Math.max(pixel[0], 0); // Bord gauche
-					pixel[0] = Math.min(pixel[0], map.getSize()[0] - map.popElement_.clientWidth - 1); // Bord droit
-					pixel[1] -= map.popElement_.clientHeight + 10;
+					h.pixel[0] -= map.popElement_.clientWidth / 2;
+					h.pixel[0] = Math.max(h.pixel[0], 0); // Bord gauche
+					h.pixel[0] = Math.min(h.pixel[0], map.getSize()[0] - map.popElement_.clientWidth - 1); // Bord droit
+					h.pixel[1] -= map.popElement_.clientHeight + 10;
 				}
-				popup.setPosition(map.getCoordinateFromPixel(pixel));
+				popup.setPosition(map.getCoordinateFromPixel(h.pixel));
 			}
-
-			// Hover a clikable feature
-			if (layer_ && layer_.options_ && layer_.options_.click)
-				map.getViewport().style.cursor = 'pointer';
-
-			return false; // Continue detection on other features at the same location
 		}
 
 		// Click on a feature
 		map.on('click', function(event) {
-			var e = event.originalEvent;
-			if (!e.shiftKey && !e.ctrlKey && !e.altKey)
-				map.forEachFeatureAtPixel(event.pixel, actionFeatureClicked, {
-					hitTolerance: 6
-				});
+			if (!event.originalEvent.shiftKey &&
+				!event.originalEvent.ctrlKey &&
+				!event.originalEvent.altKey)
+				map.forEachFeatureAtPixel(
+					event.pixel,
+					function(feature, layer) {
+						if (layer && layer.options_ &&
+							typeof layer.options_.click == 'function')
+							layer.options_.click(feature.getProperties());
+					}, {
+						hitTolerance: 6
+					});
 		});
-
-		function actionFeatureClicked(feature_, layer_) {
-			if (layer_ && layer_.options_ && typeof layer_.options_.click == 'function')
-				layer_.options_.click(feature_.getProperties());
-		}
 	}
 }
 
@@ -1126,7 +1130,7 @@ function controlPrint() {
 		action: function() {
 			window.print();
 		}
-	})
+	});
 }
 
 /**
@@ -1134,7 +1138,6 @@ function controlPrint() {
  * Requires controlButton
  * Requires activated controlLengthLine
  */
-//TODO BUG massifs : hover seulement sur les bords
 function controlLineEditor(id, snapLayers) {
 	var textareaElement = document.getElementById(id), // <textarea> element
 		format = new ol.format.GeoJSON(),
