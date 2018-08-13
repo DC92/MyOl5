@@ -245,6 +245,7 @@ var overpass = layerOverpass({
 	});
 
 map.addControl(controlLayersSwitcher(layers));
+
 map.addLayer(marqueur(
 	'data:image/svg+xml;utf8,' +
 	'<svg xmlns="http://www.w3.org/2000/svg" width="31" height="43" ' +
@@ -268,4 +269,5 @@ map.addLayer(marqueur(
 		'<br/>Y <input type="text" onchange="viseur.edit(this,1,21781)" size="12" maxlength="12" value="{3}"/>'
 	],
 	'edit'));
+
 map.addControl(controlLineEditor('geojson', overlays));

@@ -11,7 +11,6 @@
 //END test with libs non debug / on mobile
 //END http://jsbeautifier.org/ & http://jshint.com
 //BEST Site off line, application
-//TODO mettre collections -> index.js
 
 /**
  * HACK send 'onAdd' event to layers when added to a map
@@ -390,8 +389,8 @@ function initLayerVectorURLListeners(e) {
 			// Reset previous hovered styles
 			if (hoveredFeatures)
 				hoveredFeatures.forEach(function(feature) {
-					var style = feature.layer_.options_.style(feature.getProperties());
-					feature.setStyle(new ol.style.Style(style));
+					if (feature.layer_ && feature.layer_.options_)
+						feature.setStyle(new ol.style.Style(feature.layer_.options_.style(feature.getProperties())));
 				});
 
 			// Search the hovered the feature(s)
@@ -407,14 +406,16 @@ function initLayerVectorURLListeners(e) {
 				var dx = .4, // Spread too closes icons
 					xAnchor = .5 + dx * (hoveredFeatures.length - 1) / 2;
 				hoveredFeatures.forEach(function(feature) {
-					// Apply hover if any
-					var style = (feature.layer_.options_.hover || feature.layer_.options_.style)(feature.getProperties());
-					// Shift icon if too many grouped here
-					if (style.image) {
-						style.image.anchor_[0] = xAnchor;
-						xAnchor -= dx;
+					if (feature.layer_ && feature.layer_.options_) {
+						// Apply hover if any
+						var style = (feature.layer_.options_.hover || feature.layer_.options_.style)(feature.getProperties());
+						// Shift icon if too many grouped here
+						if (style.image) {
+							style.image.anchor_[0] = xAnchor;
+							xAnchor -= dx;
+						}
+						feature.setStyle(new ol.style.Style(style));
 					}
-					feature.setStyle(new ol.style.Style(style));
 				});
 			}
 		});
@@ -1133,7 +1134,7 @@ function controlPrint() {
  * Requires controlButton
  * Requires activated controlLengthLine
  */
-//TODO BUG n'hover pas, quelquefois
+//TODO BUG massifs : hover seulement sur les bords
 function controlLineEditor(id, snapLayers) {
 	var textareaElement = document.getElementById(id), // <textarea> element
 		format = new ol.format.GeoJSON(),
