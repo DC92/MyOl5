@@ -1,9 +1,16 @@
 /*!
- * OPENLAYERS V4 ADAPTATION - https://openlayers.org/
- * (C) Dominique Cavailhez 2017 - https://github.com/Dominique92/MyOl
+ * OPENLAYERS V5+ ADAPTATION - https://openlayers.org/
+ * (C) Dominique Cavailhez 2017 - https://github.com/Dominique92/MyOl5
  */
 
+.ol-viewport {
+	font-size: 16px;
+}
+
 /* All buttons*/
+.ol-control-hidden {
+	display: none;
+}
 .ol-control {
 	border-radius: 2px;
 	padding: 0;
@@ -109,14 +116,13 @@
 }
 /*
 @media print {
-	
 	html, body{
 		padding:0px!important;
 		margin:0px!important;
-    wpage-break-before: avoid;
-    wpage-break-after: avoid;
-    width:100%;
-    wheight:100%;
+	wpage-break-before: avoid;
+	wpage-break-after: avoid;
+	width:100%;
+	wheight:100%;
 	}
 	wbody{display:none;}
 .ol-viewport {
@@ -173,7 +179,8 @@
 }
 
 /* Features popup */
-.popup {
+.myPopup,
+.myPopup:hover {
 	padding: 1px 4px;
 	background: white;
 	border-radius: 5px;
@@ -182,8 +189,10 @@
 	-webkit-box-shadow: 0 3px 8px #999;
 	font-size: 12px;
 	font-family: "Helvetica Neue", Arial, Helvetica, sans-serif;
+	text-decoration: none;
+	color: initial;
 }
-.popup p {
+.myPopup p {
 	margin: 0;
 }
 
@@ -199,5 +208,5 @@
 	margin: 0;
 }
 .overpass-popup p:first-letter {
-    text-transform: uppercase;
+	text-transform: uppercase;
 }
